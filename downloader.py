@@ -26,38 +26,42 @@ def _sync_download(url: str, output_path: Path) -> dict:
     unique_id = str(uuid.uuid4())[:8]
     file_template = str(output_path / f"%(id)s_{unique_id}.%(ext)s")
 
+    # Format configuration that works both with AND without FFmpeg
     ydl_opts = {
         'outtmpl': file_template,
-        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'format': 'best[ext=mp4]/best/b',
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
-        'merge_output_format': 'mp4',
+        'noplaylist': True,
         'max_filesize': MAX_FILE_SIZE_BYTES,
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9',
+        }
     }
 
     with yt_dlp.YoutubeDL(ydl_opts) as ydl:
         info = ydl.extract_info(url, download=True)
         
         # If it's a playlist or multiple entries, pick the first
-        if 'entries' in info:
+        if 'entries' in info and info['entries']:
             info = info['entries'][0]
 
         downloaded_filename = ydl.prepare_filename(info)
         
-        # In case format merge created .mp4
-        possible_mp4 = Path(downloaded_filename).with_suffix('.mp4')
-        if possible_mp4.exists():
-            final_file = possible_mp4
-        elif Path(downloaded_filename).exists():
-            final_file = Path(downloaded_filename)
-        else:
-            # Fallback search in output directory with unique_id
-            found = list(output_path.glob(f"*{unique_id}*"))
-            if found:
-                final_file = found[0]
+        # Check expected file
+        final_file = Path(downloaded_filename)
+        if not final_file.exists():
+            possible_mp4 = final_file.with_suffix('.mp4')
+            if possible_mp4.exists():
+                final_file = possible_mp4
             else:
-                raise FileNotFoundError("Yuklangan media fayli topilmadi.")
+                found = list(output_path.glob(f"*{unique_id}*"))
+                if found:
+                    final_file = found[0]
+                else:
+                    raise FileNotFoundError("Yuklangan media fayli diskda topilmadi.")
 
         return {
             "file_path": str(final_file),
@@ -65,7 +69,7 @@ def _sync_download(url: str, output_path: Path) -> dict:
             "duration": info.get("duration", 0),
             "width": info.get("width"),
             "height": info.get("height"),
-            "uploader": info.get("uploader", "Noma'lum"),
+            "uploader": info.get("uploader", info.get("extractor", "Noma'lum")),
             "file_size": final_file.stat().st_size
         }
 

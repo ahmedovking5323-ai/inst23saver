@@ -140,11 +140,17 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     except Exception as e:
         logger.error(f"Xatolik yuz berdi: {e}", exc_info=True)
-        error_msg = "❌ **Videoni yuklashda xatolik yuz berdi.**\n"
-        if "Private" in str(e) or "login" in str(e).lower():
-            error_msg += "Video shaxsiy (private) profilga tegishli bo'lishi mumkin."
+        err_str = str(e)
+        error_msg = "❌ **Videoni yuklashda xatolik yuz berdi.**\n\n"
+        if "Private" in err_str or "login" in err_str.lower() or "login required" in err_str.lower():
+            error_msg += "📌 Video shaxsiy (private) profilga tegishli bo'lishi mumkin."
+        elif "max_filesize" in err_str.lower() or "file size" in err_str.lower():
+            error_msg += "📌 Video hajmi 50 MB cheklovidan katta."
+        elif "unsupported url" in err_str.lower():
+            error_msg += "📌 Ushbu video havolasi qo'llab-quvvatlanmaydi."
         else:
-            error_msg += "Iltimos, havolani tekshirib ko'ring yoki birozdan so'ng qayta urinib ko'ring."
+            clean_err = err_str.split('\n')[0][:120]
+            error_msg += f"📌 Tafsilot: `{clean_err}`"
         
         try:
             await status_msg.edit_text(error_msg, parse_mode="Markdown")
