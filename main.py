@@ -38,7 +38,7 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     welcome_text = (
         f"👋 **Salom, {user.first_name}!**\n\n"
         "🤖 Men **Video Saver Bot**man!\n"
-        "Instagram (Reels/Post), TikTok, YouTube va boshqa ko'plab ijtimoiy tarmoqlardan videolarni yuklab beraman.\n\n"
+        "Instagram (Reels/Post), TikTok, **Facebook (Reels/Watch)**, YouTube va boshqa ko'plab tarmoqlardan videolarni yuklab beraman.\n\n"
         "📥 **Qanday ishlatiladi?**\n"
         "Shunchaki video havolasini (linkini) menga yuboring!"
     )
@@ -52,12 +52,12 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /help command."""
     help_text = (
         "💡 **Yordam bo'limi:**\n\n"
-        "1. Instagram, TikTok yoki YouTube'dan video havolasini nusxalang (copy link).\n"
+        "1. Instagram, TikTok, Facebook yoki YouTube'dan video havolasini nusxalang (copy link).\n"
         "2. Ushbu chatga havolani joylang (paste) va yuboring.\n"
         "3. Bot avtomatik ravishda videoni yuklab beradi!\n\n"
         "⚠️ **Qoidalar va cheklovlar:**\n"
         "• Telegram Bot API cheklovi tufayli 50 MB dan katta videolarni yuborish imkoniyati cheklangan.\n"
-        "• Shaxsiy (private) akkauntlardagi videolarni yuklab bo'lmasligi mumkin."
+        "• Shaxsiy (private) akkauntlardagi va guruhlardagi yopiq videolarni yuklab bo'lmasligi mumkin."
     )
     if update.callback_query:
         await update.callback_query.answer()

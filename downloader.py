@@ -16,7 +16,7 @@ def is_valid_url(url: str) -> bool:
         "tiktok.com", "vt.tiktok.com",
         "youtube.com", "youtu.be",
         "twitter.com", "x.com",
-        "facebook.com", "fb.watch",
+        "facebook.com", "fb.watch", "fb.gg", "fb.com", "m.facebook.com",
         "pinterest.com", "pin.it"
     ]
     return any(domain in url for domain in valid_domains) or url.startswith(("http://", "https://"))
