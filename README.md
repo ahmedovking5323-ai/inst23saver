@@ -36,6 +36,7 @@ python main.py
 ## 🛠 Xususiyatlari
 
 - 📱 **Instagram Reels, Posts, IGTV** yuklash
+- 📘 **Facebook Reels, Watch, Videos** yuklash
 - 🎵 **TikTok** videolarni suvsiz (watermark'siz) yuklash
 - 🎥 **YouTube Shorts** va videolarni yuklash
 - ⚡ **Tezkor yuklash va qayta ishlash**
