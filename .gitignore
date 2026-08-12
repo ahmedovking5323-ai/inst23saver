@@ -1,0 +1,20 @@
+# Environment variables (Sensitive bot token)
+.env
+
+# Downloaded temporary files
+downloads/
+*.mp4
+*.mp3
+*.webm
+*.m4a
+
+# Python cache & virtual environment
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+
+# Antigravity system logs/artifacts
+.gemini/
