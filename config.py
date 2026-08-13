@@ -15,5 +15,6 @@ BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
 DOWNLOAD_DIR = BASE_DIR / "downloads"
 DOWNLOAD_DIR.mkdir(exist_ok=True)
 
-# Maximum file size for Telegram Bot API upload (in bytes) - default 50 MB
-MAX_FILE_SIZE_BYTES = int(os.getenv("MAX_FILE_SIZE_MB", 50)) * 1024 * 1024
+# Maximum file size setting in MB (default 200 MB)
+MAX_FILE_SIZE_MB = int(os.getenv("MAX_FILE_SIZE_MB", 200))
+MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024

@@ -21,20 +21,28 @@ def is_valid_url(url: str) -> bool:
     ]
     return any(domain in url for domain in valid_domains) or url.startswith(("http://", "https://"))
 
-def _sync_download(url: str, output_path: Path) -> dict:
-    """Synchronous video download using yt-dlp."""
+def _sync_download(url: str, output_path: Path, compact_mode: bool = False) -> dict:
+    """Synchronous video download using yt-dlp. Supports up to 200MB+ videos."""
     unique_id = str(uuid.uuid4())[:8]
     file_template = str(output_path / f"%(id)s_{unique_id}.%(ext)s")
 
-    # Format configuration that works both with AND without FFmpeg
+    max_size = 50 * 1024 * 1024 if compact_mode else MAX_FILE_SIZE_BYTES
+    
+    if compact_mode:
+        # Request format under 50MB (e.g., 720p/480p) to fit standard Telegram Bot API limit
+        format_spec = 'best[filesize<50M]/best[height<=720]/best[height<=480]/best[ext=mp4]/best/b'
+    else:
+        # Standard best quality up to max configured size (200MB)
+        format_spec = 'best[ext=mp4]/best/b'
+
     ydl_opts = {
         'outtmpl': file_template,
-        'format': 'best[ext=mp4]/best/b',
+        'format': format_spec,
         'quiet': True,
         'no_warnings': True,
         'nocheckcertificate': True,
         'noplaylist': True,
-        'max_filesize': MAX_FILE_SIZE_BYTES,
+        'max_filesize': max_size,
         'http_headers': {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
             'Accept-Language': 'en-US,en;q=0.9',
@@ -73,10 +81,10 @@ def _sync_download(url: str, output_path: Path) -> dict:
             "file_size": final_file.stat().st_size
         }
 
-async def download_video(url: str) -> dict:
+async def download_video(url: str, compact_mode: bool = False) -> dict:
     """Asynchronous wrapper for video downloading."""
     loop = asyncio.get_running_loop()
-    return await loop.run_in_executor(None, _sync_download, url, DOWNLOAD_DIR)
+    return await loop.run_in_executor(None, _sync_download, url, DOWNLOAD_DIR, compact_mode)
 
 def cleanup_file(file_path: str):
     """Safely delete downloaded file after sending."""

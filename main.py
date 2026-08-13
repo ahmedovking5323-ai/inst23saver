@@ -99,18 +99,33 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     try:
         await status_msg.edit_text("📥 **Video yuklanmoqda...**", parse_mode="Markdown")
         
-        # Download video asynchronously
-        video_data = await download_video(url)
+        # Download video asynchronously (supports up to 200MB)
+        video_data = await download_video(url, compact_mode=False)
         file_path = video_data.get("file_path")
         file_size = video_data.get("file_size", 0)
+
+        # 50MB Telegram Bot API upload threshold
+        TELEGRAM_HTTP_LIMIT = 50 * 1024 * 1024
 
         if file_size > MAX_FILE_SIZE_BYTES:
             mb_size = round(file_size / (1024 * 1024), 1)
             await status_msg.edit_text(
                 f"❌ **Xatolik:** Video hajmi juda katta ({mb_size} MB).\n"
-                f"Telegram botlari orqali 50 MB dan katta fayllarni yuborib bo'lmaydi."
+                f"Maksimal ruxsat etilgan sig'im: {MAX_FILE_SIZE_MB} MB."
             )
             return
+
+        # If file is between 50MB and 200MB, re-download compact version for Telegram API 50MB limit
+        if file_size > TELEGRAM_HTTP_LIMIT:
+            mb_size = round(file_size / (1024 * 1024), 1)
+            await status_msg.edit_text(
+                f"⚙️ **Video hajmi {mb_size} MB.**\n"
+                f"Telegram limitiga (50 MB) moslashtirilib, optimal sifatda (720p/480p) qayta yuklanmoqda...",
+                parse_mode="Markdown"
+            )
+            cleanup_file(file_path)
+            video_data = await download_video(url, compact_mode=True)
+            file_path = video_data.get("file_path")
 
         await status_msg.edit_text("📤 **Video yuborilmoqda...**", parse_mode="Markdown")
 
