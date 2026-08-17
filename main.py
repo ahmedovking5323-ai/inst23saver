@@ -2,6 +2,7 @@ import logging
 import re
 import os
 import sys
+import html
 from pathlib import Path
 
 # Ensure UTF-8 output encoding for Windows consoles
@@ -20,7 +21,7 @@ from telegram.ext import (
     ContextTypes,
     filters,
 )
-from config import BOT_TOKEN, MAX_FILE_SIZE_BYTES
+from config import BOT_TOKEN, MAX_FILE_SIZE_BYTES, MAX_FILE_SIZE_MB
 from downloader import is_valid_url, download_video, cleanup_file
 
 # Enable logging
@@ -36,44 +37,44 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command."""
     user = update.effective_user
     welcome_text = (
-        f"👋 **Salom, {user.first_name}!**\n\n"
-        "🤖 Men **Video Saver Bot**man!\n"
-        "Instagram (Reels/Post), TikTok, **Facebook (Reels/Watch)**, YouTube va boshqa ko'plab tarmoqlardan videolarni yuklab beraman.\n\n"
-        "📥 **Qanday ishlatiladi?**\n"
+        f"👋 <b>Salom, {html.escape(user.first_name)}!</b>\n\n"
+        "🤖 Men <b>Video Saver Bot</b>man!\n"
+        "Instagram (Reels/Post), TikTok, <b>Facebook (Reels/Watch)</b>, YouTube va boshqa ko'plab tarmoqlardan videolarni yuklab beraman.\n\n"
+        "📥 <b>Qanday ishlatiladi?</b>\n"
         "Shunchaki video havolasini (linkini) menga yuboring!"
     )
     keyboard = [
         [InlineKeyboardButton("❓ Yordam", callback_data="help_info")],
     ]
     reply_markup = InlineKeyboardMarkup(keyboard)
-    await update.message.reply_text(welcome_text, parse_mode="Markdown", reply_markup=reply_markup)
+    await update.message.reply_text(welcome_text, parse_mode="HTML", reply_markup=reply_markup)
 
 async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /help command."""
     help_text = (
-        "💡 **Yordam bo'limi:**\n\n"
+        "💡 <b>Yordam bo'limi:</b>\n\n"
         "1. Instagram, TikTok, Facebook yoki YouTube'dan video havolasini nusxalang (copy link).\n"
         "2. Ushbu chatga havolani joylang (paste) va yuboring.\n"
         "3. Bot avtomatik ravishda videoni yuklab beradi!\n\n"
-        "⚠️ **Qoidalar va cheklovlar:**\n"
+        "⚠️ <b>Qoidalar va cheklovlar:</b>\n"
         "• Telegram Bot API cheklovi tufayli 50 MB dan katta videolarni yuborish imkoniyati cheklangan.\n"
         "• Shaxsiy (private) akkauntlardagi va guruhlardagi yopiq videolarni yuklab bo'lmasligi mumkin."
     )
     if update.callback_query:
         await update.callback_query.answer()
-        await update.callback_query.message.reply_text(help_text, parse_mode="Markdown")
+        await update.callback_query.message.reply_text(help_text, parse_mode="HTML")
     else:
-        await update.message.reply_text(help_text, parse_mode="Markdown")
+        await update.message.reply_text(help_text, parse_mode="HTML")
 
 async def about_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /about command."""
     about_text = (
-        "ℹ️ **InstaSaver Telegram Bot**\n\n"
+        "ℹ️ <b>InstaSaver Telegram Bot</b>\n\n"
         "🚀 Versiya: 1.0.0\n"
         "⚡ Texnologiyalar: Python, python-telegram-bot, yt-dlp\n"
         "✨ Qulay va tezkor video yuklash xizmati!"
     )
-    await update.message.reply_text(about_text, parse_mode="Markdown")
+    await update.message.reply_text(about_text, parse_mode="HTML")
 
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle incoming text messages containing video links."""
@@ -93,11 +94,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     # Send status message
-    status_msg = await update.message.reply_text("🔍 **Video topilmoqda...**", parse_mode="Markdown")
+    status_msg = await update.message.reply_text("🔍 <b>Video topilmoqda...</b>", parse_mode="HTML")
 
     file_path = None
     try:
-        await status_msg.edit_text("📥 **Video yuklanmoqda...**", parse_mode="Markdown")
+        await status_msg.edit_text("📥 <b>Video yuklanmoqda...</b>", parse_mode="HTML")
         
         # Download video asynchronously (supports up to 200MB)
         video_data = await download_video(url, compact_mode=False)
@@ -110,8 +111,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if file_size > MAX_FILE_SIZE_BYTES:
             mb_size = round(file_size / (1024 * 1024), 1)
             await status_msg.edit_text(
-                f"❌ **Xatolik:** Video hajmi juda katta ({mb_size} MB).\n"
-                f"Maksimal ruxsat etilgan sig'im: {MAX_FILE_SIZE_MB} MB."
+                f"❌ <b>Xatolik:</b> Video hajmi juda katta ({mb_size} MB).\n"
+                f"Maksimal ruxsat etilgan sig'im: {MAX_FILE_SIZE_MB} MB.",
+                parse_mode="HTML"
             )
             return
 
@@ -119,20 +121,27 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if file_size > TELEGRAM_HTTP_LIMIT:
             mb_size = round(file_size / (1024 * 1024), 1)
             await status_msg.edit_text(
-                f"⚙️ **Video hajmi {mb_size} MB.**\n"
+                f"⚙️ <b>Video hajmi {mb_size} MB.</b>\n"
                 f"Telegram limitiga (50 MB) moslashtirilib, optimal sifatda (720p/480p) qayta yuklanmoqda...",
-                parse_mode="Markdown"
+                parse_mode="HTML"
             )
             cleanup_file(file_path)
             video_data = await download_video(url, compact_mode=True)
             file_path = video_data.get("file_path")
 
-        await status_msg.edit_text("📤 **Video yuborilmoqda...**", parse_mode="Markdown")
+        await status_msg.edit_text("📤 <b>Video yuborilmoqda...</b>", parse_mode="HTML")
+
+        # HTML escape title & uploader to prevent parsing entity errors
+        raw_title = video_data.get('title', 'Video')
+        raw_uploader = video_data.get('uploader', 'Noma\'lum')
+        safe_title = html.escape(str(raw_title))
+        safe_uploader = html.escape(str(raw_uploader))
+        bot_username = html.escape(context.bot.username or 'bot')
 
         caption = (
-            f"🎬 **{video_data.get('title', 'Video')}**\n\n"
-            f"👤 Manba: {video_data.get('uploader', 'Noma\'lum')}\n"
-            f"🤖 @{context.bot.username or 'bot'} yordamida yuklab olindi."
+            f"🎬 <b>{safe_title}</b>\n\n"
+            f"👤 Manba: {safe_uploader}\n"
+            f"🤖 @{bot_username} yordamida yuklab olindi."
         )
         
         # Limit caption length for Telegram
@@ -140,15 +149,29 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption = caption[:1000] + "..."
 
         with open(file_path, 'rb') as video_file:
-            await update.message.reply_video(
-                video=video_file,
-                caption=caption,
-                parse_mode="Markdown",
-                supports_streaming=True,
-                duration=video_data.get("duration"),
-                width=video_data.get("width"),
-                height=video_data.get("height")
-            )
+            try:
+                await update.message.reply_video(
+                    video=video_file,
+                    caption=caption,
+                    parse_mode="HTML",
+                    supports_streaming=True,
+                    duration=video_data.get("duration"),
+                    width=video_data.get("width"),
+                    height=video_data.get("height")
+                )
+            except Exception as send_err:
+                # Fallback to plain text caption if HTML parsing still fails for exotic titles
+                logger.warning(f"HTML caption send failed, trying plain text fallback: {send_err}")
+                video_file.seek(0)
+                plain_caption = f"🎬 {raw_title}\n\n👤 Manba: {raw_uploader}\n🤖 @{context.bot.username or 'bot'} yordamida yuklab olindi."[:1000]
+                await update.message.reply_video(
+                    video=video_file,
+                    caption=plain_caption,
+                    supports_streaming=True,
+                    duration=video_data.get("duration"),
+                    width=video_data.get("width"),
+                    height=video_data.get("height")
+                )
 
         # Delete status message
         await status_msg.delete()
@@ -156,7 +179,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Xatolik yuz berdi: {e}", exc_info=True)
         err_str = str(e)
-        error_msg = "❌ **Videoni yuklashda xatolik yuz berdi.**\n\n"
+        error_msg = "❌ <b>Videoni yuklashda xatolik yuz berdi.</b>\n\n"
         if "Private" in err_str or "login" in err_str.lower() or "login required" in err_str.lower():
             error_msg += "📌 Video shaxsiy (private) profilga tegishli bo'lishi mumkin."
         elif "max_filesize" in err_str.lower() or "file size" in err_str.lower():
@@ -164,13 +187,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif "unsupported url" in err_str.lower():
             error_msg += "📌 Ushbu video havolasi qo'llab-quvvatlanmaydi."
         else:
-            clean_err = err_str.split('\n')[0][:120]
-            error_msg += f"📌 Tafsilot: `{clean_err}`"
+            clean_err = html.escape(err_str.split('\n')[0][:120])
+            error_msg += f"📌 Tafsilot: <code>{clean_err}</code>"
         
         try:
-            await status_msg.edit_text(error_msg, parse_mode="Markdown")
+            await status_msg.edit_text(error_msg, parse_mode="HTML")
         except Exception:
-            await update.message.reply_text(error_msg, parse_mode="Markdown")
+            await update.message.reply_text(error_msg, parse_mode="HTML")
 
     finally:
         if file_path:
