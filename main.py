@@ -36,8 +36,9 @@ URL_REGEX = re.compile(r'https?://[^\s]+')
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Handle /start command."""
     user = update.effective_user
+    first_name = html.escape(user.first_name or "Foydalanuvchi")
     welcome_text = (
-        f"👋 <b>Salom, {html.escape(user.first_name)}!</b>\n\n"
+        f"👋 <b>Salom, {first_name}!</b>\n\n"
         "🤖 Men <b>Video Saver Bot</b>man!\n"
         "Instagram (Reels/Post), TikTok, <b>Facebook (Reels/Watch)</b>, YouTube va boshqa ko'plab tarmoqlardan videolarni yuklab beraman.\n\n"
         "📥 <b>Qanday ishlatiladi?</b>\n"
@@ -93,12 +94,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Ushbu havola qo'llab-quvvatlanmaydi.")
         return
 
-    # Send status message
-    status_msg = await update.message.reply_text("🔍 <b>Video topilmoqda...</b>", parse_mode="HTML")
+    # Send status message (Plain text to avoid parse errors)
+    status_msg = await update.message.reply_text("🔍 Video topilmoqda...")
 
     file_path = None
     try:
-        await status_msg.edit_text("📥 <b>Video yuklanmoqda...</b>", parse_mode="HTML")
+        await status_msg.edit_text("📥 Video yuklanmoqda...")
         
         # Download video asynchronously (supports up to 200MB)
         video_data = await download_video(url, compact_mode=False)
@@ -111,9 +112,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if file_size > MAX_FILE_SIZE_BYTES:
             mb_size = round(file_size / (1024 * 1024), 1)
             await status_msg.edit_text(
-                f"❌ <b>Xatolik:</b> Video hajmi juda katta ({mb_size} MB).\n"
-                f"Maksimal ruxsat etilgan sig'im: {MAX_FILE_SIZE_MB} MB.",
-                parse_mode="HTML"
+                f"❌ Xatolik: Video hajmi juda katta ({mb_size} MB).\n"
+                f"Maksimal ruxsat etilgan sig'im: {MAX_FILE_SIZE_MB} MB."
             )
             return
 
@@ -121,21 +121,26 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if file_size > TELEGRAM_HTTP_LIMIT:
             mb_size = round(file_size / (1024 * 1024), 1)
             await status_msg.edit_text(
-                f"⚙️ <b>Video hajmi {mb_size} MB.</b>\n"
-                f"Telegram limitiga (50 MB) moslashtirilib, optimal sifatda (720p/480p) qayta yuklanmoqda...",
-                parse_mode="HTML"
+                f"⚙️ Video hajmi {mb_size} MB.\n"
+                f"Telegram limitiga (50 MB) moslashtirilib, optimal sifatda (720p/480p) qayta yuklanmoqda..."
             )
             cleanup_file(file_path)
             video_data = await download_video(url, compact_mode=True)
             file_path = video_data.get("file_path")
 
-        await status_msg.edit_text("📤 <b>Video yuborilmoqda...</b>", parse_mode="HTML")
+        await status_msg.edit_text("📤 Video yuborilmoqda...")
 
-        # HTML escape title & uploader to prevent parsing entity errors
-        raw_title = video_data.get('title', 'Video')
-        raw_uploader = video_data.get('uploader', 'Noma\'lum')
-        safe_title = html.escape(str(raw_title))
-        safe_uploader = html.escape(str(raw_uploader))
+        # Prepare safe title & uploader (truncate BEFORE HTML formatting to prevent broken HTML tags)
+        raw_title = str(video_data.get('title', 'Video'))
+        raw_uploader = str(video_data.get('uploader', 'Noma\'lum'))
+        
+        if len(raw_title) > 600:
+            raw_title = raw_title[:600] + "..."
+        if len(raw_uploader) > 100:
+            raw_uploader = raw_uploader[:100] + "..."
+
+        safe_title = html.escape(raw_title)
+        safe_uploader = html.escape(raw_uploader)
         bot_username = html.escape(context.bot.username or 'bot')
 
         caption = (
@@ -143,10 +148,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"👤 Manba: {safe_uploader}\n"
             f"🤖 @{bot_username} yordamida yuklab olindi."
         )
-        
-        # Limit caption length for Telegram
-        if len(caption) > 1024:
-            caption = caption[:1000] + "..."
 
         with open(file_path, 'rb') as video_file:
             try:
@@ -160,10 +161,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     height=video_data.get("height")
                 )
             except Exception as send_err:
-                # Fallback to plain text caption if HTML parsing still fails for exotic titles
                 logger.warning(f"HTML caption send failed, trying plain text fallback: {send_err}")
                 video_file.seek(0)
-                plain_caption = f"🎬 {raw_title}\n\n👤 Manba: {raw_uploader}\n🤖 @{context.bot.username or 'bot'} yordamida yuklab olindi."[:1000]
+                plain_caption = (
+                    f"🎬 {raw_title}\n\n"
+                    f"👤 Manba: {raw_uploader}\n"
+                    f"🤖 @{context.bot.username or 'bot'} yordamida yuklab olindi."
+                )[:1000]
                 await update.message.reply_video(
                     video=video_file,
                     caption=plain_caption,
@@ -179,7 +183,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         logger.error(f"Xatolik yuz berdi: {e}", exc_info=True)
         err_str = str(e)
-        error_msg = "❌ <b>Videoni yuklashda xatolik yuz berdi.</b>\n\n"
+        error_msg = "❌ Videoni yuklashda xatolik yuz berdi.\n\n"
         if "Private" in err_str or "login" in err_str.lower() or "login required" in err_str.lower():
             error_msg += "📌 Video shaxsiy (private) profilga tegishli bo'lishi mumkin."
         elif "max_filesize" in err_str.lower() or "file size" in err_str.lower():
@@ -187,13 +191,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         elif "unsupported url" in err_str.lower():
             error_msg += "📌 Ushbu video havolasi qo'llab-quvvatlanmaydi."
         else:
-            clean_err = html.escape(err_str.split('\n')[0][:120])
-            error_msg += f"📌 Tafsilot: <code>{clean_err}</code>"
+            clean_err = err_str.split('\n')[0][:120]
+            error_msg += f"📌 Tafsilot: {clean_err}"
         
+        # Send error message in plain text (no parse_mode) so it NEVER fails with entity errors
         try:
-            await status_msg.edit_text(error_msg, parse_mode="HTML")
+            await status_msg.edit_text(error_msg)
         except Exception:
-            await update.message.reply_text(error_msg, parse_mode="HTML")
+            await update.message.reply_text(error_msg)
 
     finally:
         if file_path:
